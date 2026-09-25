@@ -51,15 +51,12 @@ jobs:
           echo "Путь к собранному приложению: $APP_PATH"
           mkdir -p AppetizePayload
           cp -r "$APP_PATH" AppetizePayload/
-          cd AppetizePayload
-          zip -r ../DiscountCards-App.zip DiscountCards.app
-          cd ..
 
       - name: Загрузка архива в артефакты GitHub
         uses: actions/upload-artifact@v4
         with:
           name: DiscountCards-Simulator-App
-          path: DiscountCards-App.zip
+          path: AppetizePayload
           retention-days: 1
 
       - name: ИНСТРУКЦИЯ ПО ЗАПУСКУ В БРАУЗЕРЕ
@@ -70,11 +67,10 @@ jobs:
           echo "К сожалению, серверы GitHub macos-14 больше не поддерживают трансляцию экрана (VNC), а старые серверы недоступны. Но есть гораздо лучший и быстрый способ (без лагов и ввода паролей)!" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Как запустить приложение прямо сейчас (займет 1 минуту):" >> $GITHUB_STEP_SUMMARY
-          echo "1. В самом низу этой страницы (в блоке **Artifacts**) скачайте файл **DiscountCards-Simulator-App** (он весит пару мегабайт)." >> $GITHUB_STEP_SUMMARY
-          echo "2. Извлеките скачанный архив \`.zip\`. Внутри будет файл \`DiscountCards-App.zip\`." >> $GITHUB_STEP_SUMMARY
-          echo "3. Перейдите на бесплатный сервис **[Appetize.io](https://appetize.io/upload)** (регистрация не нужна)." >> $GITHUB_STEP_SUMMARY
-          echo "4. Нажмите **Select file** и загрузите туда файл \`DiscountCards-App.zip\`." >> $GITHUB_STEP_SUMMARY
-          echo "5. Дождитесь загрузки (10 секунд) и нажмите **View App**." >> $GITHUB_STEP_SUMMARY
+          echo "1. В самом низу этой страницы (в блоке **Artifacts**) скачайте файл **DiscountCards-Simulator-App** (архив \`.zip\`)." >> $GITHUB_STEP_SUMMARY
+          echo "2. Перейдите на бесплатный сервис **[Appetize.io](https://appetize.io/upload)** (регистрация не нужна)." >> $GITHUB_STEP_SUMMARY
+          echo "3. Ничего не распаковывая, нажмите **Select file** и загрузите туда скачанный архив \`DiscountCards-Simulator-App.zip\`." >> $GITHUB_STEP_SUMMARY
+          echo "4. Дождитесь загрузки (10 секунд) и нажмите **View App**." >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "🎉 Готово! Приложение запустится в идеальном симуляторе iPhone прямо в вашем браузере." >> $GITHUB_STEP_SUMMARY
           echo "=========================================================="

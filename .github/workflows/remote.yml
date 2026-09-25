@@ -52,20 +52,32 @@ jobs:
             CODE_SIGNING_REQUIRED=NO \
             VALIDATE_PRODUCT=NO
 
-      - name: Настройка VNC и веб-интерфейса
+      - name: Настройка VNC сервера
         run: |
-          # Включение VNC с паролем G6nTq8kl
           sudo defaults write /Library/Preferences/com.apple.RemoteManagement VNCAlwaysAddLocalHash -bool true
-          sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart -activate -configure -access -on -clientopts -setvnclegacy -vnclegacy yes -setvncpw -vncpw G6nTq8kl -restart -agent -privs -all || true
-          
-          # Установка инструментов веб-трансляции
-          brew install cloudflared websockify || true
-          git clone --depth 1 https://github.com/novnc/noVNC.git /tmp/novnc || true
-          
-          # Запуск моста websockify к VNC (5900 -> 8080)
-          websockify --web /tmp/novnc 8080 localhost:5900 &
+          sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart \
+            -activate -configure -access -on \
+            -clientopts -setvnclegacy -vnclegacy yes \
+            -setvncpw -vncpw G6nTq8kl \
+            -restart -agent -privs -all -allowAccessFor -allUsers || true
 
-      - name: Запуск симулятора iPhone (около 3 минут)
+      - name: Установка инструментов трансляции (cloudflared и noVNC)
+        run: |
+          # Прямая загрузка официального бинарника cloudflared для Apple Silicon (macOS)
+          sudo mkdir -p /usr/local/bin
+          curl -fsSL https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-darwin-arm64.tgz -o /tmp/cloudflared.tgz
+          sudo tar -xzf /tmp/cloudflared.tgz -C /usr/local/bin
+          sudo chmod +x /usr/local/bin/cloudflared
+          sudo cp /usr/local/bin/cloudflared /opt/homebrew/bin/cloudflared 2>/dev/null || true
+          cloudflared --version
+
+          # Подготовка noVNC и websockify
+          python3 -m pip install websockify 2>/dev/null || true
+          git clone --depth 1 https://github.com/novnc/noVNC.git /tmp/novnc || true
+          git clone --depth 1 https://github.com/novnc/websockify.git /tmp/novnc/utils/websockify || true
+          chmod +x /tmp/novnc/utils/novnc_proxy
+
+      - name: Запуск симулятора iPhone (около 2-3 минут)
         run: |
           open -a Simulator || true
           xcrun simctl boot "${{ github.event.inputs.device_model }}" || true
@@ -75,13 +87,17 @@ jobs:
           xcrun simctl install booted "$APP_PATH"
           xcrun simctl launch booted by.gstu.itp41.stasev.DiscountCards || true
 
-      - name: ССЫЛКА НА ПРИЛОЖЕНИЕ (нажмите сюда)
+      - name: ССЫЛКА НА ПРИЛОЖЕНИЕ (откройте этот шаг)
         run: |
-          cloudflared tunnel --url http://localhost:8080 > /tmp/cloudflared.log 2>&1 &
+          # Запуск моста noVNC к VNC (5900 -> 8080)
+          /tmp/novnc/utils/novnc_proxy --vnc localhost:5900 --listen 8080 > /tmp/novnc_proxy.log 2>&1 &
+          
+          # Запуск Cloudflare Quick Tunnel
+          /usr/local/bin/cloudflared tunnel --url http://localhost:8080 > /tmp/cloudflared.log 2>&1 &
           
           TUNNEL_URL=""
-          for i in {1..30}; do
-            TUNNEL_URL=$(grep -o 'https://[a-zA-Z0-9-]*\.trycloudflare\.com' /tmp/cloudflared.log | head -n 1 || true)
+          for i in {1..40}; do
+            TUNNEL_URL=$(grep -o 'https://[^ ]*trycloudflare\.com' /tmp/cloudflared.log | head -n 1 || true)
             if [ -n "$TUNNEL_URL" ]; then
               break
             fi
@@ -89,18 +105,18 @@ jobs:
           done
           
           echo "=========================================================="
-          echo "ССЫЛКА ДЛЯ ВХОДА В СИМУЛЯТОР В БРАУЗЕРЕ:"
+          echo " ССЫЛКА ДЛЯ ВХОДА В СИМУЛЯТОР В БРАУЗЕРЕ:"
           if [ -n "$TUNNEL_URL" ]; then
-            echo "$TUNNEL_URL/vnc.html?autoconnect=true"
+            echo ""
+            echo " 👉 $TUNNEL_URL/vnc.html?autoconnect=true"
+            echo ""
           else
+            echo "Не удалось получить ссылку туннеля за 40 секунд. Лог:"
             cat /tmp/cloudflared.log
           fi
-          echo ""
-          echo "Пароль для входа: G6nTq8kl"
+          echo " 🔑 Пароль для входа: G6nTq8kl"
           echo "=========================================================="
-
-      - name: Сеанс работает (не отменяйте, пока пользуетесь)
-        run: |
+          
           MINS=${{ github.event.inputs.session_duration }}
-          echo "Сеанс запущен на $MINS минут..."
+          echo "Сеанс запущен на $MINS минут (не закрывайте шаг, пока пользуетесь)..."
           sleep $(($MINS * 60))

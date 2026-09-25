@@ -54,12 +54,14 @@ jobs:
 
       - name: Настройка VNC сервера
         run: |
+          sudo dscl . -passwd /Users/runner G6nTq8kl || true
           sudo defaults write /Library/Preferences/com.apple.RemoteManagement VNCAlwaysAddLocalHash -bool true
           sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart \
             -activate -configure -access -on \
+            -users runner -privs -all \
             -clientopts -setvnclegacy -vnclegacy yes \
             -setvncpw -vncpw G6nTq8kl \
-            -restart -agent -privs -all -allowAccessFor -allUsers || true
+            -restart -agent -allowAccessFor -allUsers || true
 
       - name: Установка инструментов трансляции (cloudflared и noVNC)
         run: |

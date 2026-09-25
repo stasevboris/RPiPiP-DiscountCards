@@ -55,32 +55,34 @@ jobs:
       - name: Настройка VNC сервера
         run: |
           # 1. Задаем системный пароль пользователю runner
-          sudo /usr/sbin/sysadminctl -resetPasswordFor runner -newPassword G6nTq8kl 2>/dev/null || true
-          sudo dscl . -passwd /Users/runner "" G6nTq8kl 2>/dev/null || true
+          sudo /usr/sbin/sysadminctl -resetPasswordFor runner -newPassword 12345678 2>/dev/null || true
+          sudo dscl . -passwd /Users/runner "" 12345678 2>/dev/null || true
           
           # 2. Выдаем системные разрешения TCC (Screen Capture, Accessibility, PostEvent) для обхода диалогов macOS Sonoma
           sudo sqlite3 "/Library/Application Support/com.apple.TCC/TCC.db" "INSERT OR REPLACE INTO access VALUES('kTCCServiceScreenCapture','com.apple.screensharingd',0,2,4,1,NULL,NULL,0,'UNUSED',NULL,0,1700000000);" 2>/dev/null || true
           sudo sqlite3 "/Library/Application Support/com.apple.TCC/TCC.db" "INSERT OR REPLACE INTO access VALUES('kTCCServiceAccessibility','com.apple.screensharingd',0,2,4,1,NULL,NULL,0,'UNUSED',NULL,0,1700000000);" 2>/dev/null || true
           sudo sqlite3 "/Library/Application Support/com.apple.TCC/TCC.db" "INSERT OR REPLACE INTO access VALUES('kTCCServicePostEvent','com.apple.screensharingd',0,2,4,1,NULL,NULL,0,'UNUSED',NULL,0,1700000000);" 2>/dev/null || true
-          sudo sqlite3 "/Library/Application Support/com.apple.TCC/TCC.db" "INSERT OR REPLACE INTO access VALUES('kTCCServiceScreenCapture','com.apple.RemoteDesktopAgent',0,2,4,1,NULL,NULL,0,'UNUSED',NULL,0,1700000000);" 2>/dev/null || true
-          sudo sqlite3 "/Library/Application Support/com.apple.TCC/TCC.db" "INSERT OR REPLACE INTO access VALUES('kTCCServiceAccessibility','com.apple.RemoteDesktopAgent',0,2,4,1,NULL,NULL,0,'UNUSED',NULL,0,1700000000);" 2>/dev/null || true
           
-          # 3. Отключаем диалог подтверждения от локального пользователя (ScreenSharingReqPerm)
-          sudo defaults write /Library/Preferences/com.apple.RemoteManagement ScreenSharingReqPerm -bool false
+          # 3. Настройка параметров Screen Sharing
           sudo defaults write /Library/Preferences/com.apple.RemoteManagement VNCAlwaysAddLocalHash -bool true
           sudo defaults write /Library/Preferences/com.apple.RemoteManagement ARD_AllLocalUsers -bool true
           sudo defaults write /Library/Preferences/com.apple.RemoteManagement ARD_AllLocalUsersPrivs -int 1073742079
           sudo defaults write /Library/Preferences/com.apple.RemoteDesktop VNCOnly -bool true
           
-          # 4. Активация через kickstart без подтверждений (-setreqperm no)
+          # 4. Надежная установка VNC пароля (12345678) через VNCSettings.txt (обходит баги kickstart на macOS 14)
+          sudo perl -we 'BEGIN { @k = unpack "C*", pack "H*", "1734516E8BA8C5E2FF1C39567390ADCA"}; $_ = $ARGV[0]; chomp; s/^(.{8}).*/$1/; @p = unpack "C*", $_; foreach (@k) { printf "%02X", $_ ^ (shift @p || 0) }; print "\n"' "12345678" | sudo tee /Library/Preferences/com.apple.VNCSettings.txt
+          sudo chmod 644 /Library/Preferences/com.apple.VNCSettings.txt
+          
+          # 5. Активация VNC через kickstart
           sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart \
             -activate -configure -access -on \
             -users runner -privs -all \
             -allowAccessFor -allUsers \
-            -clientopts -setvnclegacy yes -setvncpw -vncpw G6nTq8kl -setreqperm no || true
-            
-          sudo chmod 644 /Library/Preferences/com.apple.VNCSettings.txt 2>/dev/null || true
-          sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart -restart -agent -console || true
+            -clientopts -setvnclegacy yes -restart -agent -console || true
+          
+          # 6. Проверка, что порт 5900 открыт
+          sleep 3
+          netstat -an | grep 5900 || echo "Порт 5900 не слушается, но продолжаем..."
 
       - name: Установка инструментов трансляции (cloudflared и noVNC)
         run: |
@@ -126,7 +128,7 @@ jobs:
             sleep 1
           done
           
-          FINAL_URL="${TUNNEL_URL}/vnc.html?autoconnect=true&password=G6nTq8kl"
+          FINAL_URL="${TUNNEL_URL}/vnc.html?autoconnect=true&password=12345678"
           
           echo "=========================================================="
           echo " ССЫЛКА ДЛЯ ВХОДА В СИМУЛЯТОР В БРАУЗЕРЕ:"
@@ -136,7 +138,7 @@ jobs:
             echo ""
             echo "## 📱 Симулятор запущен и готов к работе!" >> $GITHUB_STEP_SUMMARY
             echo "### [👉 НАЖМИТЕ СЮДА, ЧТОБЫ ОТКРЫТЬ СИМУЛЯТОР В БРАУЗЕРЕ]($FINAL_URL)" >> $GITHUB_STEP_SUMMARY
-            echo "Пароль \`G6nTq8kl\` уже встроен в ссылку (вход автоматический)." >> $GITHUB_STEP_SUMMARY
+            echo "Пароль \`12345678\` уже встроен в ссылку (вход автоматический)." >> $GITHUB_STEP_SUMMARY
           else
             echo "Не удалось получить ссылку туннеля за 40 секунд. Лог:"
             cat /tmp/cloudflared.log

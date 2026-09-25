@@ -7,9 +7,8 @@ public struct ScannerView: View {
     
     @State private var viewModel: ScannerViewModel
     @State private var manualInput: String = ""
-    @State private var showingManualInput = false
-    @State private var targetNewCardNumber: String?
-    @State private var targetFoundCard: DiscountCardEntity?
+    @State private var targetNewCard: StringIdentifiable? = nil
+    @State private var targetFoundCard: DiscountCardEntity? = nil
     
     public init(context: ModelContext) {
         _viewModel = State(initialValue: ScannerViewModel(context: context))
@@ -37,7 +36,7 @@ public struct ScannerView: View {
                     Button("Закрыть") { dismiss() }
                 }
             }
-            .sheet(item: $targetNewCardNumberIdentifiable) { item in
+            .sheet(item: $targetNewCard) { item in
                 CardFormView(viewModel: CardFormViewModel(initialCardNumber: item.value, context: context))
             }
             .sheet(item: $targetFoundCard) { card in
@@ -46,10 +45,6 @@ public struct ScannerView: View {
                 }
             }
         }
-    }
-    
-    private var targetNewCardNumberIdentifiable: StringIdentifiable? {
-        targetNewCardNumber.map { StringIdentifiable(value: $0) }
     }
     
     private var scannerOverlay: some View {
@@ -95,7 +90,7 @@ public struct ScannerView: View {
                     .font(.headline)
                     .foregroundStyle(.blue)
                 Button("Добавить в кошелек") {
-                    targetNewCardNumber = code
+                    targetNewCard = StringIdentifiable(value: code)
                 }
                 .buttonStyle(.borderedProminent)
             }
@@ -152,9 +147,13 @@ public struct ScannerView: View {
     }
 }
 
-private struct StringIdentifiable: Identifiable {
-    let value: String
-    var id: String { value }
+public struct StringIdentifiable: Identifiable {
+    public let value: String
+    public var id: String { value }
+    
+    public init(value: String) {
+        self.value = value
+    }
 }
 
 extension DiscountCardEntity: Identifiable {}

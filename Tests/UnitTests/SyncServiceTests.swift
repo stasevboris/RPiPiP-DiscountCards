@@ -24,22 +24,22 @@ final class SyncServiceTests: XCTestCase {
     private var mockAPI: MockAPI!
     private var syncService: SyncService!
     
-    override func setUp() {
-        super.setUp()
+    override func setUpWithError() throws {
+        try super.setUpWithError()
         let schema = Schema([DiscountCardEntity.self, DeletedRecordEntity.self])
         let config = ModelConfiguration(isStoredInMemoryOnly: true)
-        container = try! ModelContainer(for: schema, configurations: config)
+        container = try ModelContainer(for: schema, configurations: config)
         context = container.mainContext
         mockAPI = MockAPI()
         syncService = SyncService(api: mockAPI, context: context)
     }
     
-    override func tearDown() {
+    override func tearDownWithError() throws {
         container = nil
         context = nil
         mockAPI = nil
         syncService = nil
-        super.tearDown()
+        try super.tearDownWithError()
     }
     
     func testApplySnapshotInsertsNewCards() throws {

@@ -7,7 +7,7 @@ public protocol BarcodeGenerating {
 }
 
 public struct CoreImageBarcodeGenerator: BarcodeGenerating {
-    private let context = CIContext()
+    private let context = CIContext(options: [.useSoftwareRenderer: true])
     
     public init() {}
     

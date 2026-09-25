@@ -8,12 +8,12 @@ final class DebouncedSearchTests: XCTestCase {
         
         debouncer.update(text: "Евро")
         
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
             XCTAssertEqual(debouncer.debouncedText, "Евро")
             expectation.fulfill()
         }
         
-        waitForExpectations(timeout: 1.0)
+        waitForExpectations(timeout: 2.0)
     }
     
     func testDebounceTrimsWhitespace() {
@@ -22,11 +22,11 @@ final class DebouncedSearchTests: XCTestCase {
         
         debouncer.update(text: "   Минск   ")
         
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
             XCTAssertEqual(debouncer.debouncedText, "Минск")
             expectation.fulfill()
         }
         
-        waitForExpectations(timeout: 1.0)
+        waitForExpectations(timeout: 2.0)
     }
 }

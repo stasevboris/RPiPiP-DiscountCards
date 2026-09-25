@@ -7,18 +7,18 @@ final class DiscountCardEntityTests: XCTestCase {
     private var container: ModelContainer!
     private var context: ModelContext!
     
-    override func setUp() {
-        super.setUp()
+    override func setUpWithError() throws {
+        try super.setUpWithError()
         let schema = Schema([DiscountCardEntity.self, DeletedRecordEntity.self])
         let config = ModelConfiguration(isStoredInMemoryOnly: true)
-        container = try! ModelContainer(for: schema, configurations: config)
+        container = try ModelContainer(for: schema, configurations: config)
         context = container.mainContext
     }
     
-    override func tearDown() {
+    override func tearDownWithError() throws {
         container = nil
         context = nil
-        super.tearDown()
+        try super.tearDownWithError()
     }
     
     func testCardEntityCreationAndFetch() throws {

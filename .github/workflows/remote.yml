@@ -8,31 +8,28 @@ name: "Run App in Browser (Запустить симулятор)"
         required: true
         default: 'main'
       device_model:
-        description: 'Устройство: iPhone 15 Pro или iPad Pro 12.9-inch (6th gen)'
+        description: 'Устройство: iPhone 16 Pro или iPad Pro 13-inch (M4)'
         required: true
-        default: 'iPhone 15 Pro'
-      session_duration:
-        description: 'Сколько минут будет работать (до 300)'
-        required: true
-        default: '60'
+        default: 'iPhone 16 Pro'
 
 jobs:
-  remote:
-    runs-on: macos-13
-    timeout-minutes: 360
+  build_for_browser:
+    runs-on: macos-14
+    timeout-minutes: 30
 
     steps:
-      - name: Set up job
-        run: echo "Инициализация окружения macOS для Стасева Б.В. (ИТП-41)..."
-
       - name: Загрузка файлов
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.inputs.target_branch }}
 
-      - name: Выбор Xcode
+      - name: Выбор Xcode 16
         run: |
-          sudo xcode-select -s /Applications/Xcode_15.2.app/Contents/Developer
+          if [ -d "/Applications/Xcode_16.0.app" ]; then
+            sudo xcode-select -s /Applications/Xcode_16.0.app/Contents/Developer
+          elif [ -d "/Applications/Xcode_16.1.app" ]; then
+            sudo xcode-select -s /Applications/Xcode_16.1.app/Contents/Developer
+          fi
           xcodebuild -version
 
       - name: Сборка приложения (около 1 минуты)
@@ -48,86 +45,36 @@ jobs:
             CODE_SIGNING_REQUIRED=NO \
             VALIDATE_PRODUCT=NO
 
-      - name: Настройка VNC сервера
+      - name: Подготовка архива для браузера
         run: |
-          # Включаем Remote Desktop и устанавливаем пароль для VNC (macOS 13 поддерживает это без багов)
-          sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart -activate -configure -access -on -clientopts -setvnclegacy -vnclegacy yes -clientopts -setvncpw -vncpw 12345678 -restart -agent -privs -all -allowAccessFor -allUsers
-          
-          # Отключаем диалог подтверждения
-          sudo defaults write /Library/Preferences/com.apple.RemoteManagement ScreenSharingReqPerm -bool false
-          sudo defaults write /Library/Preferences/com.apple.RemoteDesktop VNCOnly -bool true
-          
-          # Перезагружаем сервис для надежности
-          sudo launchctl unload -w /System/Library/LaunchDaemons/com.apple.screensharing.plist 2>/dev/null || true
-          sudo launchctl load -w /System/Library/LaunchDaemons/com.apple.screensharing.plist 2>/dev/null || true
-          
-          sleep 3
-          netstat -an | grep 5900 || echo "Порт 5900 не слушается, но продолжаем..."
-
-      - name: Установка инструментов трансляции (cloudflared и noVNC)
-        run: |
-          # Прямая загрузка официального бинарника cloudflared для Apple Silicon (macOS)
-          sudo mkdir -p /usr/local/bin
-          curl -fsSL https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-darwin-arm64.tgz -o /tmp/cloudflared.tgz
-          sudo tar -xzf /tmp/cloudflared.tgz -C /usr/local/bin
-          sudo chmod +x /usr/local/bin/cloudflared
-          sudo cp /usr/local/bin/cloudflared /opt/homebrew/bin/cloudflared 2>/dev/null || true
-          cloudflared --version
-
-          # Подготовка noVNC и websockify
-          python3 -m pip install websockify 2>/dev/null || true
-          git clone --depth 1 https://github.com/novnc/noVNC.git /tmp/novnc || true
-          git clone --depth 1 https://github.com/novnc/websockify.git /tmp/novnc/utils/websockify || true
-          chmod +x /tmp/novnc/utils/novnc_proxy
-
-      - name: Запуск симулятора iPhone (около 2-3 минут)
-        run: |
-          open -a Simulator || true
-          xcrun simctl boot "${{ github.event.inputs.device_model }}" || true
-          xcrun simctl bootstatus booted -b || true
           APP_PATH=$(find build/Build/Products -name "DiscountCards.app" | head -n 1)
           echo "Путь к собранному приложению: $APP_PATH"
-          xcrun simctl install booted "$APP_PATH"
-          xcrun simctl launch booted by.gstu.itp41.stasev.DiscountCards || true
+          mkdir -p AppetizePayload
+          cp -r "$APP_PATH" AppetizePayload/
+          cd AppetizePayload
+          zip -r ../DiscountCards-App.zip DiscountCards.app
+          cd ..
 
-      - name: ССЫЛКА НА ПРИЛОЖЕНИЕ (нажмите сюда)
-        run: |
-          # Запуск моста noVNC к VNC (5900 -> 8080)
-          nohup /tmp/novnc/utils/novnc_proxy --vnc 127.0.0.1:5900 --listen 0.0.0.0:8080 > /tmp/novnc_proxy.log 2>&1 &
-          
-          # Запуск Cloudflare Quick Tunnel
-          nohup /usr/local/bin/cloudflared tunnel --url http://localhost:8080 > /tmp/cloudflared.log 2>&1 &
-          disown -a
-          
-          TUNNEL_URL=""
-          for i in {1..40}; do
-            TUNNEL_URL=$(grep -o 'https://[^ ]*trycloudflare\.com' /tmp/cloudflared.log | head -n 1 || true)
-            if [ -n "$TUNNEL_URL" ]; then
-              break
-            fi
-            sleep 1
-          done
-          
-          FINAL_URL="${TUNNEL_URL}/vnc.html?autoconnect=true&password=12345678"
-          
-          echo "=========================================================="
-          echo " ССЫЛКА ДЛЯ ВХОДА В СИМУЛЯТОР В БРАУЗЕРЕ:"
-          if [ -n "$TUNNEL_URL" ]; then
-            echo ""
-            echo " 👉 $FINAL_URL"
-            echo ""
-            echo "## 📱 Симулятор запущен и готов к работе!" >> $GITHUB_STEP_SUMMARY
-            echo "### [👉 НАЖМИТЕ СЮДА, ЧТОБЫ ОТКРЫТЬ СИМУЛЯТОР В БРАУЗЕРЕ]($FINAL_URL)" >> $GITHUB_STEP_SUMMARY
-            echo "Пароль \`12345678\` уже встроен в ссылку (вход автоматический)." >> $GITHUB_STEP_SUMMARY
-          else
-            echo "Не удалось получить ссылку туннеля за 40 секунд. Лог:"
-            cat /tmp/cloudflared.log
-            echo "### Не удалось запустить туннель Cloudflare" >> $GITHUB_STEP_SUMMARY
-          fi
-          echo "=========================================================="
+      - name: Загрузка архива в артефакты GitHub
+        uses: actions/upload-artifact@v4
+        with:
+          name: DiscountCards-Simulator-App
+          path: DiscountCards-App.zip
+          retention-days: 1
 
-      - name: Сеанс работает (не отменяйте, пока пользуетесь)
+      - name: ИНСТРУКЦИЯ ПО ЗАПУСКУ В БРАУЗЕРЕ
         run: |
-          MINS=${{ github.event.inputs.session_duration }}
-          echo "Сеанс запущен на $MINS минут..."
-          sleep $(($MINS * 60))
+          echo "=========================================================="
+          echo "## 📱 Приложение собрано и готово к запуску в браузере!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "К сожалению, серверы GitHub macos-14 больше не поддерживают трансляцию экрана (VNC), а старые серверы недоступны. Но есть гораздо лучший и быстрый способ (без лагов и ввода паролей)!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Как запустить приложение прямо сейчас (займет 1 минуту):" >> $GITHUB_STEP_SUMMARY
+          echo "1. В самом низу этой страницы (в блоке **Artifacts**) скачайте файл **DiscountCards-Simulator-App** (он весит пару мегабайт)." >> $GITHUB_STEP_SUMMARY
+          echo "2. Извлеките скачанный архив \`.zip\`. Внутри будет файл \`DiscountCards-App.zip\`." >> $GITHUB_STEP_SUMMARY
+          echo "3. Перейдите на бесплатный сервис **[Appetize.io](https://appetize.io/upload)** (регистрация не нужна)." >> $GITHUB_STEP_SUMMARY
+          echo "4. Нажмите **Select file** и загрузите туда файл \`DiscountCards-App.zip\`." >> $GITHUB_STEP_SUMMARY
+          echo "5. Дождитесь загрузки (10 секунд) и нажмите **View App**." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "🎉 Готово! Приложение запустится в идеальном симуляторе iPhone прямо в вашем браузере." >> $GITHUB_STEP_SUMMARY
+          echo "=========================================================="

@@ -43,7 +43,8 @@ jobs:
             -derivedDataPath build \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
-            VALIDATE_PRODUCT=NO
+            VALIDATE_PRODUCT=NO \
+            ONLY_ACTIVE_ARCH=NO
 
       - name: Подготовка архива для браузера
         run: |

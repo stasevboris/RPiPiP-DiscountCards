@@ -54,14 +54,27 @@ jobs:
 
       - name: Настройка VNC сервера
         run: |
+          # 1. Задаем системный пароль пользователю runner
+          echo "runner:G6nTq8kl" | sudo chpasswd 2>/dev/null || true
           sudo dscl . -passwd /Users/runner G6nTq8kl || true
+          
+          # 2. Разрешаем Remote Management и VNC
           sudo defaults write /Library/Preferences/com.apple.RemoteManagement VNCAlwaysAddLocalHash -bool true
+          sudo defaults write /Library/Preferences/com.apple.RemoteManagement ARD_AllLocalUsers -bool true
+          
+          # 3. Предоставляем полные права пользователю runner
           sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart \
             -activate -configure -access -on \
             -users runner -privs -all \
-            -clientopts -setvnclegacy -vnclegacy yes \
-            -setvncpw -vncpw G6nTq8kl \
-            -restart -agent -allowAccessFor -allUsers || true
+            -allowAccessFor -allUsers || true
+            
+          # 4. Включаем legacy VNC аутентификацию по паролю
+          sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart \
+            -configure -clientopts -setvnclegacy -vnclegacy yes -setvncpw -vncpw G6nTq8kl || true
+            
+          # 5. Выставляем права на файл настроек VNC и перезапускаем агент
+          sudo chmod 644 /Library/Preferences/com.apple.VNCSettings.txt 2>/dev/null || true
+          sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart -restart -agent || true
 
       - name: Установка инструментов трансляции (cloudflared и noVNC)
         run: |

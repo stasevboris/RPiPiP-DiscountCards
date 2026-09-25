@@ -55,26 +55,32 @@ jobs:
       - name: Настройка VNC сервера
         run: |
           # 1. Задаем системный пароль пользователю runner
-          echo "runner:G6nTq8kl" | sudo chpasswd 2>/dev/null || true
-          sudo dscl . -passwd /Users/runner G6nTq8kl || true
+          sudo /usr/sbin/sysadminctl -resetPasswordFor runner -newPassword G6nTq8kl 2>/dev/null || true
+          sudo dscl . -passwd /Users/runner "" G6nTq8kl 2>/dev/null || true
           
-          # 2. Разрешаем Remote Management и VNC
+          # 2. Выдаем системные разрешения TCC (Screen Capture, Accessibility, PostEvent) для обхода диалогов macOS Sonoma
+          sudo sqlite3 "/Library/Application Support/com.apple.TCC/TCC.db" "INSERT OR REPLACE INTO access VALUES('kTCCServiceScreenCapture','com.apple.screensharingd',0,2,4,1,NULL,NULL,0,'UNUSED',NULL,0,1700000000);" 2>/dev/null || true
+          sudo sqlite3 "/Library/Application Support/com.apple.TCC/TCC.db" "INSERT OR REPLACE INTO access VALUES('kTCCServiceAccessibility','com.apple.screensharingd',0,2,4,1,NULL,NULL,0,'UNUSED',NULL,0,1700000000);" 2>/dev/null || true
+          sudo sqlite3 "/Library/Application Support/com.apple.TCC/TCC.db" "INSERT OR REPLACE INTO access VALUES('kTCCServicePostEvent','com.apple.screensharingd',0,2,4,1,NULL,NULL,0,'UNUSED',NULL,0,1700000000);" 2>/dev/null || true
+          sudo sqlite3 "/Library/Application Support/com.apple.TCC/TCC.db" "INSERT OR REPLACE INTO access VALUES('kTCCServiceScreenCapture','com.apple.RemoteDesktopAgent',0,2,4,1,NULL,NULL,0,'UNUSED',NULL,0,1700000000);" 2>/dev/null || true
+          sudo sqlite3 "/Library/Application Support/com.apple.TCC/TCC.db" "INSERT OR REPLACE INTO access VALUES('kTCCServiceAccessibility','com.apple.RemoteDesktopAgent',0,2,4,1,NULL,NULL,0,'UNUSED',NULL,0,1700000000);" 2>/dev/null || true
+          
+          # 3. Отключаем диалог подтверждения от локального пользователя (ScreenSharingReqPerm)
+          sudo defaults write /Library/Preferences/com.apple.RemoteManagement ScreenSharingReqPerm -bool false
           sudo defaults write /Library/Preferences/com.apple.RemoteManagement VNCAlwaysAddLocalHash -bool true
           sudo defaults write /Library/Preferences/com.apple.RemoteManagement ARD_AllLocalUsers -bool true
+          sudo defaults write /Library/Preferences/com.apple.RemoteManagement ARD_AllLocalUsersPrivs -int 1073742079
+          sudo defaults write /Library/Preferences/com.apple.RemoteDesktop VNCOnly -bool true
           
-          # 3. Предоставляем полные права пользователю runner
+          # 4. Активация через kickstart без подтверждений (-setreqperm no)
           sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart \
             -activate -configure -access -on \
             -users runner -privs -all \
-            -allowAccessFor -allUsers || true
+            -allowAccessFor -allUsers \
+            -clientopts -setvnclegacy yes -setvncpw -vncpw G6nTq8kl -setreqperm no || true
             
-          # 4. Включаем legacy VNC аутентификацию по паролю
-          sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart \
-            -configure -clientopts -setvnclegacy -vnclegacy yes -setvncpw -vncpw G6nTq8kl || true
-            
-          # 5. Выставляем права на файл настроек VNC и перезапускаем агент
           sudo chmod 644 /Library/Preferences/com.apple.VNCSettings.txt 2>/dev/null || true
-          sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart -restart -agent || true
+          sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart -restart -agent -console || true
 
       - name: Установка инструментов трансляции (cloudflared и noVNC)
         run: |
@@ -91,6 +97,15 @@ jobs:
           git clone --depth 1 https://github.com/novnc/noVNC.git /tmp/novnc || true
           git clone --depth 1 https://github.com/novnc/websockify.git /tmp/novnc/utils/websockify || true
           chmod +x /tmp/novnc/utils/novnc_proxy
+
+          # Настройка noVNC на автоматический ввод учетных данных без всплывающих окон
+          python3 -c "
+with open('/tmp/novnc/app/ui.js', 'r') as f:
+    text = f.read()
+text = text.replace('credentialsRequired(e) {', 'credentialsRequired(e) { UI.rfb.sendCredentials({ username: \'runner\', password: \'G6nTq8kl\' }); return;')
+with open('/tmp/novnc/app/ui.js', 'w') as f:
+    f.write(text)
+" 2>/dev/null || true
 
       - name: Запуск симулятора iPhone (около 2-3 минут)
         run: |
@@ -123,13 +138,13 @@ jobs:
           echo " ССЫЛКА ДЛЯ ВХОДА В СИМУЛЯТОР В БРАУЗЕРЕ:"
           if [ -n "$TUNNEL_URL" ]; then
             echo ""
-            echo " 👉 $TUNNEL_URL/vnc.html?autoconnect=true"
+            echo " 👉 $TUNNEL_URL/vnc.html?autoconnect=true&password=G6nTq8kl"
             echo ""
           else
             echo "Не удалось получить ссылку туннеля за 40 секунд. Лог:"
             cat /tmp/cloudflared.log
           fi
-          echo " 🔑 Пароль для входа: G6nTq8kl"
+          echo " Пароль уже встроен в ссылку (автоматический вход)"
           echo "=========================================================="
           
           MINS=${{ github.event.inputs.session_duration }}

@@ -30,6 +30,15 @@ jobs:
         with:
           ref: ${{ github.event.inputs.target_branch }}
 
+      - name: Выбор Xcode
+        run: |
+          if [ -d "/Applications/Xcode_16.0.app" ]; then
+            sudo xcode-select -s /Applications/Xcode_16.0.app/Contents/Developer
+          elif [ -d "/Applications/Xcode_16.1.app" ]; then
+            sudo xcode-select -s /Applications/Xcode_16.1.app/Contents/Developer
+          fi
+          xcodebuild -version
+
       - name: Сборка приложения (около 1 минуты)
         run: |
           brew install xcodegen || true
@@ -41,27 +50,37 @@ jobs:
             -derivedDataPath build \
             CODE_SIGNING_ALLOWED=NO
 
-      - name: Установка инструментов
+      - name: Настройка VNC и веб-интерфейса
         run: |
+          # Включение VNC с паролем G6nTq8kl
+          sudo defaults write /Library/Preferences/com.apple.RemoteManagement VNCAlwaysAddLocalHash -bool true
+          sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart -activate -configure -access -on -clientopts -setvnclegacy -vnclegacy yes -setvncpw -vncpw G6nTq8kl -restart -agent -privs -all || true
+          
+          # Установка инструментов веб-трансляции
           brew install cloudflared websockify || true
-          npm install -g novnc || true
+          git clone --depth 1 https://github.com/novnc/noVNC.git /tmp/novnc || true
+          
+          # Запуск моста websockify к VNC (5900 -> 8080)
+          websockify --web /tmp/novnc 8080 localhost:5900 &
 
       - name: Запуск симулятора iPhone (около 3 минут)
         run: |
+          open -a Simulator || true
           xcrun simctl boot "${{ github.event.inputs.device_model }}" || true
           APP_PATH=$(find build/Build/Products -name "DiscountCards.app" | head -n 1)
           xcrun simctl install booted "$APP_PATH"
-          xcrun simctl launch booted by.gstu.itp41.stasev.DiscountCards
+          xcrun simctl launch booted by.gstu.itp41.stasev.DiscountCards || true
 
       - name: ССЫЛКА НА ПРИЛОЖЕНИЕ (нажмите сюда)
         run: |
+          cloudflared tunnel --url http://localhost:8080 > /tmp/cloudflared.log 2>&1 &
+          sleep 8
+          
           echo "=========================================================="
           echo "ССЫЛКА ДЛЯ ВХОДА В СИМУЛЯТОР В БРАУЗЕРЕ:"
+          grep -o 'https://.*\.trycloudflare\.com' /tmp/cloudflared.log | head -n 1 || cat /tmp/cloudflared.log
           echo "Пароль для входа: G6nTq8kl"
           echo "=========================================================="
-          # Запуск веб-вещания окна симулятора через quick tunnel
-          cloudflared tunnel --url http://localhost:8080 &
-          sleep 5
 
       - name: Сеанс работает (не отменяйте, пока пользуетесь)
         run: |

@@ -45,7 +45,10 @@ public struct CardExporter {
             var lines = ["Название;Номер карты;Категория;Скидка;Заметка"]
             for c in cards {
                 let row = [c.name, c.cardNumber, c.categoryId, "\(c.discountPercent ?? 0)%", c.note]
-                    .map { "\"$0.replacingOccurrences(of: "\"", with: "\"\"\")\"" }
+                    .map { item -> String in
+                        let escaped = item.replacingOccurrences(of: "\"", with: "\"\"")
+                        return "\"\(escaped)\""
+                    }
                     .joined(separator: ";")
                 lines.append(row)
             }

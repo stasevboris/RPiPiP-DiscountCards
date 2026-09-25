@@ -35,3 +35,22 @@ targets:
       - path: Tests/UITests
     dependencies:
       - target: DiscountCards
+schemes:
+  DiscountCards:
+    build:
+      targets:
+        DiscountCards: all
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - DiscountCardsTests
+  DiscountCardsUITests:
+    build:
+      targets:
+        DiscountCardsUITests: all
+    test:
+      config: Debug
+      targets:
+        - DiscountCardsUITests

@@ -69,18 +69,33 @@ jobs:
         run: |
           open -a Simulator || true
           xcrun simctl boot "${{ github.event.inputs.device_model }}" || true
+          xcrun simctl bootstatus booted -b || true
           APP_PATH=$(find build/Build/Products -name "DiscountCards.app" | head -n 1)
+          echo "Путь к собранному приложению: $APP_PATH"
           xcrun simctl install booted "$APP_PATH"
           xcrun simctl launch booted by.gstu.itp41.stasev.DiscountCards || true
 
       - name: ССЫЛКА НА ПРИЛОЖЕНИЕ (нажмите сюда)
         run: |
           cloudflared tunnel --url http://localhost:8080 > /tmp/cloudflared.log 2>&1 &
-          sleep 8
+          
+          TUNNEL_URL=""
+          for i in {1..30}; do
+            TUNNEL_URL=$(grep -o 'https://[a-zA-Z0-9-]*\.trycloudflare\.com' /tmp/cloudflared.log | head -n 1 || true)
+            if [ -n "$TUNNEL_URL" ]; then
+              break
+            fi
+            sleep 1
+          done
           
           echo "=========================================================="
           echo "ССЫЛКА ДЛЯ ВХОДА В СИМУЛЯТОР В БРАУЗЕРЕ:"
-          grep -o 'https://.*\.trycloudflare\.com' /tmp/cloudflared.log | head -n 1 || cat /tmp/cloudflared.log
+          if [ -n "$TUNNEL_URL" ]; then
+            echo "$TUNNEL_URL/vnc.html?autoconnect=true"
+          else
+            cat /tmp/cloudflared.log
+          fi
+          echo ""
           echo "Пароль для входа: G6nTq8kl"
           echo "=========================================================="
 

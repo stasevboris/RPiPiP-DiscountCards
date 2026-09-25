@@ -157,4 +157,4 @@ private struct StringIdentifiable: Identifiable {
     var id: String { value }
 }
 
-extension DiscountCardEntity: @retroactive Identifiable {}
+extension DiscountCardEntity: Identifiable {}

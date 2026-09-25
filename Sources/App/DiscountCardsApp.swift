@@ -14,16 +14,7 @@ struct DiscountCardsApp: App {
             DeletedRecordEntity.self
         ])
         
-        let config: ModelConfiguration
-        if inMemory {
-            config = ModelConfiguration("DiscountCards", schema: schema, isStoredInMemoryOnly: true)
-        } else {
-            let storeURL = URL.applicationSupportDirectory.appending(path: "DiscountCards.store")
-            if args.contains("-resetStore") {
-                try? FileManager.default.removeItem(at: storeURL)
-            }
-            config = ModelConfiguration(schema: schema, url: storeURL)
-        }
+        let config = ModelConfiguration(isStoredInMemoryOnly: inMemory)
         
         do {
             modelContainer = try ModelContainer(for: schema, configurations: config)

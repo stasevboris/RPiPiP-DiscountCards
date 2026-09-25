@@ -108,13 +108,14 @@ jobs:
           xcrun simctl install booted "$APP_PATH"
           xcrun simctl launch booted by.gstu.itp41.stasev.DiscountCards || true
 
-      - name: ССЫЛКА НА ПРИЛОЖЕНИЕ (откройте этот шаг)
+      - name: ССЫЛКА НА ПРИЛОЖЕНИЕ (нажмите сюда)
         run: |
           # Запуск моста noVNC к VNC (5900 -> 8080)
-          /tmp/novnc/utils/novnc_proxy --vnc localhost:5900 --listen 8080 > /tmp/novnc_proxy.log 2>&1 &
+          nohup /tmp/novnc/utils/novnc_proxy --vnc localhost:5900 --listen 8080 > /tmp/novnc_proxy.log 2>&1 &
           
           # Запуск Cloudflare Quick Tunnel
-          /usr/local/bin/cloudflared tunnel --url http://localhost:8080 > /tmp/cloudflared.log 2>&1 &
+          nohup /usr/local/bin/cloudflared tunnel --url http://localhost:8080 > /tmp/cloudflared.log 2>&1 &
+          disown -a
           
           TUNNEL_URL=""
           for i in {1..40}; do
@@ -125,19 +126,26 @@ jobs:
             sleep 1
           done
           
+          FINAL_URL="${TUNNEL_URL}/vnc.html?autoconnect=true&password=G6nTq8kl"
+          
           echo "=========================================================="
           echo " ССЫЛКА ДЛЯ ВХОДА В СИМУЛЯТОР В БРАУЗЕРЕ:"
           if [ -n "$TUNNEL_URL" ]; then
             echo ""
-            echo " 👉 $TUNNEL_URL/vnc.html?autoconnect=true&password=G6nTq8kl"
+            echo " 👉 $FINAL_URL"
             echo ""
+            echo "## 📱 Симулятор запущен и готов к работе!" >> $GITHUB_STEP_SUMMARY
+            echo "### [👉 НАЖМИТЕ СЮДА, ЧТОБЫ ОТКРЫТЬ СИМУЛЯТОР В БРАУЗЕРЕ]($FINAL_URL)" >> $GITHUB_STEP_SUMMARY
+            echo "Пароль \`G6nTq8kl\` уже встроен в ссылку (вход автоматический)." >> $GITHUB_STEP_SUMMARY
           else
             echo "Не удалось получить ссылку туннеля за 40 секунд. Лог:"
             cat /tmp/cloudflared.log
+            echo "### Не удалось запустить туннель Cloudflare" >> $GITHUB_STEP_SUMMARY
           fi
-          echo " Пароль уже встроен в ссылку (автоматический вход)"
           echo "=========================================================="
-          
+
+      - name: Сеанс работает (не отменяйте, пока пользуетесь)
+        run: |
           MINS=${{ github.event.inputs.session_duration }}
-          echo "Сеанс запущен на $MINS минут (не закрывайте шаг, пока пользуетесь)..."
+          echo "Сеанс запущен на $MINS минут..."
           sleep $(($MINS * 60))

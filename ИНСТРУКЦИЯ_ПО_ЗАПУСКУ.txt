@@ -26,9 +26,11 @@
      git remote add origin https://github.com/ВАШ_АККАУНТ/RPiPiP-DiscountCards.git
      git push -u origin main --tags
 
-3. ЗАПУСК В БРАУЗЕРЕ (БЕЗ MAC) ЧЕРЕЗ GITHUB ACTIONS:
+3. ЗАПУСК В БРАУЗЕРЕ (БЕЗ MAC) ЧЕРЕЗ APPETIZE.IO:
    Перейдите в репозитории на GitHub во вкладку "Actions".
-   Слева выберите "Запустить приложение в браузере" (.github/workflows/remote.yml).
+   Слева выберите "Run App in Browser (Запустить симулятор)" (.github/workflows/remote.yml).
    Нажмите "Run workflow".
-   Через 5-7 минут откройте шаг "ССЫЛКА НА ПРИЛОЖЕНИЕ" и введите пароль G6nTq8kl.
+   Через 1 минуту откройте выполненный запуск, скачайте архив "DiscountCards-Simulator-App.zip" из вкладки Summary (Сводка).
+   Зайдите на сайт https://appetize.io/upload и загрузите туда этот архив.
+   Нажмите "View App" и в боковом меню выберите устройство с iOS 17 (например, iPhone 15 Pro).
 ========================================================================

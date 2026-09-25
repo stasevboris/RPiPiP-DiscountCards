@@ -1,0 +1,70 @@
+{
+  "cards": [
+    {
+      "id": "card-1",
+      "name": "Е-Плюс (Евроопт)",
+      "card_number": "9900012345678",
+      "barcode_format": "EAN13",
+      "category_id": "supermarket",
+      "color_hex": "#e11d48",
+      "color_gradient_end": "#9f1239",
+      "discount_percent": 5,
+      "note": "Бонусная карта сети Евроопт, Хит! и Магия"
+    },
+    {
+      "id": "card-2",
+      "name": "Mark Formelle Club",
+      "card_number": "2800045612340",
+      "barcode_format": "EAN13",
+      "category_id": "fashion",
+      "color_hex": "#ea580c",
+      "color_gradient_end": "#c2410c",
+      "discount_percent": 10,
+      "note": "Скидка на базовые коллекции одежды"
+    },
+    {
+      "id": "card-3",
+      "name": "5 Элемент",
+      "card_number": "5501234987654",
+      "barcode_format": "CODE128",
+      "category_id": "electronics",
+      "color_hex": "#dc2626",
+      "color_gradient_end": "#7f1d1d",
+      "discount_percent": 7,
+      "note": "Клубная карта бытовой техники и электроники"
+    },
+    {
+      "id": "card-4",
+      "name": "Мила (Mila)",
+      "card_number": "2900088899123",
+      "barcode_format": "EAN13",
+      "category_id": "cosmetics",
+      "color_hex": "#db2777",
+      "color_gradient_end": "#9d174d",
+      "discount_percent": 3,
+      "note": "Парфюмерия, косметика, бытовая химия"
+    },
+    {
+      "id": "card-5",
+      "name": "Белнефтехим Заправка",
+      "card_number": "7700034125671",
+      "barcode_format": "CODE128",
+      "category_id": "gas",
+      "color_hex": "#16a34a",
+      "color_gradient_end": "#14532d",
+      "discount_percent": 4,
+      "note": "Бонусная карта АЗС, скидка на кофе и топливо"
+    },
+    {
+      "id": "card-6",
+      "name": "Санта (Santa)",
+      "card_number": "4810012349872",
+      "barcode_format": "EAN13",
+      "category_id": "supermarket",
+      "color_hex": "#0284c7",
+      "color_gradient_end": "#0369a1",
+      "discount_percent": 5,
+      "note": "Сеть супермаркетов Санта и Санта Ритейл"
+    }
+  ]
+}

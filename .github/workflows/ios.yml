@@ -1,0 +1,51 @@
+name: iOS CI & Test Automation
+
+on:
+  push:
+    branches: [ main ]
+    tags: [ 'lab*' ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build_and_test:
+    runs-on: macos-14
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Select Xcode 16
+        run: sudo xcode-select -s /Applications/Xcode_16.0.app/Contents/Developer
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode Project
+        run: xcodegen generate
+
+      - name: Run Unit Tests (iPhone 16 Pro)
+        run: |
+          xcodebuild test \
+            -project DiscountCards.xcodeproj \
+            -scheme DiscountCards \
+            -destination 'platform=iOS Simulator,name=iPhone 16 Pro,OS=latest' \
+            -resultBundlePath TestResults.xcresult \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Run UI Tests & Capture Screenshots
+        run: |
+          xcodebuild test \
+            -project DiscountCards.xcodeproj \
+            -scheme DiscountCardsUITests \
+            -destination 'platform=iOS Simulator,name=iPhone 16 Pro,OS=latest' \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Upload Test Results Artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: xcode-test-results
+          path: TestResults.xcresult

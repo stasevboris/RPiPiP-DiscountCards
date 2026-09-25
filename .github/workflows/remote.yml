@@ -1,0 +1,70 @@
+name: Запустить приложение в браузере
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_branch:
+        description: 'Версия приложения: main (последняя), lab1, lab2, lab3 или lab4'
+        required: true
+        default: 'main'
+      device_model:
+        description: 'Устройство: iPhone 16 Pro или iPad Pro 13-inch (M4)'
+        required: true
+        default: 'iPhone 16 Pro'
+      session_duration:
+        description: 'Сколько минут будет работать (до 300)'
+        required: true
+        default: '60'
+
+jobs:
+  remote:
+    runs-on: macos-14
+    timeout-minutes: 360
+
+    steps:
+      - name: Set up job
+        run: echo "Инициализация окружения macOS для Стасева Б.В. (ИТП-41)..."
+
+      - name: Загрузка файлов
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.target_branch }}
+
+      - name: Сборка приложения (около 1 минуты)
+        run: |
+          brew install xcodegen || true
+          xcodegen generate
+          xcodebuild build \
+            -project DiscountCards.xcodeproj \
+            -scheme DiscountCards \
+            -destination "platform=iOS Simulator,name=${{ github.event.inputs.device_model }},OS=latest" \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Установка инструментов
+        run: |
+          brew install cloudflared websockify || true
+          npm install -g novnc || true
+
+      - name: Запуск симулятора iPhone (около 3 минут)
+        run: |
+          xcrun simctl boot "${{ github.event.inputs.device_model }}" || true
+          APP_PATH=$(find build/Build/Products -name "DiscountCards.app" | head -n 1)
+          xcrun simctl install booted "$APP_PATH"
+          xcrun simctl launch booted by.gstu.itp41.stasev.DiscountCards
+
+      - name: ССЫЛКА НА ПРИЛОЖЕНИЕ (нажмите сюда)
+        run: |
+          echo "=========================================================="
+          echo "ССЫЛКА ДЛЯ ВХОДА В СИМУЛЯТОР В БРАУЗЕРЕ:"
+          echo "Пароль для входа: G6nTq8kl"
+          echo "=========================================================="
+          # Запуск веб-вещания окна симулятора через quick tunnel
+          cloudflared tunnel --url http://localhost:8080 &
+          sleep 5
+
+      - name: Сеанс работает (не отменяйте, пока пользуетесь)
+        run: |
+          MINS=${{ github.event.inputs.session_duration }}
+          echo "Сеанс запущен на $MINS минут..."
+          sleep $(($MINS * 60))

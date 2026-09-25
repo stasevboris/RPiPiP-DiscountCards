@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "categories": [
+    { "id": "supermarket", "name": "Супермаркеты", "icon": "cart.fill", "color": "#16a34a" },
+    { "id": "fashion", "name": "Одежда и обувь", "icon": "tshirt.fill", "color": "#ea580c" },
+    { "id": "electronics", "name": "Электроника", "icon": "tv.fill", "color": "#2563eb" },
+    { "id": "pharmacy", "name": "Аптеки и здоровье", "icon": "cross.case.fill", "color": "#dc2626" },
+    { "id": "cosmetics", "name": "Косметика и быт", "icon": "sparkles", "color": "#db2777" },
+    { "id": "cafe", "name": "Кафе и рестораны", "icon": "cup.and.saucer.fill", "color": "#d97706" },
+    { "id": "gas", "name": "АЗС и авто", "icon": "fuelpump.fill", "color": "#4f46e5" },
+    { "id": "kids", "name": "Детские товары", "icon": "figure.and.child.holdinghands", "color": "#0891b2" },
+    { "id": "other", "name": "Другое", "icon": "creditcard.fill", "color": "#64748b" }
+  ]
+}

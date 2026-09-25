@@ -36,7 +36,7 @@ jobs:
         run: |
           xcodebuild test \
             -project DiscountCards.xcodeproj \
-            -scheme DiscountCards \
+            -scheme DiscountCardsTests \
             -destination 'platform=iOS Simulator,name=iPhone 16 Pro,OS=latest' \
             -resultBundlePath TestResults.xcresult \
             CODE_SIGNING_ALLOWED=NO

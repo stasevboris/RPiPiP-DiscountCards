@@ -13,9 +13,6 @@ targets:
       - path: Sources
     resources:
       - path: Resources
-    scheme:
-      testTargets:
-        - DiscountCardsTests
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: by.gstu.itp41.stasev.DiscountCards
@@ -38,3 +35,30 @@ targets:
       - path: Tests/UITests
     dependencies:
       - target: DiscountCards
+schemes:
+  DiscountCards:
+    build:
+      targets:
+        DiscountCards: all
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - name: DiscountCardsTests
+  DiscountCardsTests:
+    build:
+      targets:
+        DiscountCardsTests: all
+    test:
+      config: Debug
+      targets:
+        - name: DiscountCardsTests
+  DiscountCardsUITests:
+    build:
+      targets:
+        DiscountCardsUITests: all
+    test:
+      config: Debug
+      targets:
+        - name: DiscountCardsUITests

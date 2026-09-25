@@ -8,9 +8,9 @@ name: "Run App in Browser (Запустить симулятор)"
         required: true
         default: 'main'
       device_model:
-        description: 'Устройство: iPhone 16 Pro или iPad Pro 13-inch (M4)'
+        description: 'Устройство: iPhone 15 Pro или iPad Pro 12.9-inch (6th gen)'
         required: true
-        default: 'iPhone 16 Pro'
+        default: 'iPhone 15 Pro'
       session_duration:
         description: 'Сколько минут будет работать (до 300)'
         required: true
@@ -18,7 +18,7 @@ name: "Run App in Browser (Запустить симулятор)"
 
 jobs:
   remote:
-    runs-on: macos-14
+    runs-on: macos-13
     timeout-minutes: 360
 
     steps:
@@ -32,11 +32,7 @@ jobs:
 
       - name: Выбор Xcode
         run: |
-          if [ -d "/Applications/Xcode_16.0.app" ]; then
-            sudo xcode-select -s /Applications/Xcode_16.0.app/Contents/Developer
-          elif [ -d "/Applications/Xcode_16.1.app" ]; then
-            sudo xcode-select -s /Applications/Xcode_16.1.app/Contents/Developer
-          fi
+          sudo xcode-select -s /Applications/Xcode_15.2.app/Contents/Developer
           xcodebuild -version
 
       - name: Сборка приложения (около 1 минуты)
@@ -54,33 +50,17 @@ jobs:
 
       - name: Настройка VNC сервера
         run: |
-          # 1. Задаем системный пароль пользователю runner
-          sudo /usr/sbin/sysadminctl -resetPasswordFor runner -newPassword 12345678 2>/dev/null || true
-          sudo dscl . -passwd /Users/runner "" 12345678 2>/dev/null || true
+          # Включаем Remote Desktop и устанавливаем пароль для VNC (macOS 13 поддерживает это без багов)
+          sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart -activate -configure -access -on -clientopts -setvnclegacy -vnclegacy yes -clientopts -setvncpw -vncpw 12345678 -restart -agent -privs -all -allowAccessFor -allUsers
           
-          # 2. Выдаем системные разрешения TCC (Screen Capture, Accessibility, PostEvent) для обхода диалогов macOS Sonoma
-          sudo sqlite3 "/Library/Application Support/com.apple.TCC/TCC.db" "INSERT OR REPLACE INTO access VALUES('kTCCServiceScreenCapture','com.apple.screensharingd',0,2,4,1,NULL,NULL,0,'UNUSED',NULL,0,1700000000);" 2>/dev/null || true
-          sudo sqlite3 "/Library/Application Support/com.apple.TCC/TCC.db" "INSERT OR REPLACE INTO access VALUES('kTCCServiceAccessibility','com.apple.screensharingd',0,2,4,1,NULL,NULL,0,'UNUSED',NULL,0,1700000000);" 2>/dev/null || true
-          sudo sqlite3 "/Library/Application Support/com.apple.TCC/TCC.db" "INSERT OR REPLACE INTO access VALUES('kTCCServicePostEvent','com.apple.screensharingd',0,2,4,1,NULL,NULL,0,'UNUSED',NULL,0,1700000000);" 2>/dev/null || true
-          
-          # 3. Настройка параметров Screen Sharing
-          sudo defaults write /Library/Preferences/com.apple.RemoteManagement VNCAlwaysAddLocalHash -bool true
-          sudo defaults write /Library/Preferences/com.apple.RemoteManagement ARD_AllLocalUsers -bool true
-          sudo defaults write /Library/Preferences/com.apple.RemoteManagement ARD_AllLocalUsersPrivs -int 1073742079
+          # Отключаем диалог подтверждения
+          sudo defaults write /Library/Preferences/com.apple.RemoteManagement ScreenSharingReqPerm -bool false
           sudo defaults write /Library/Preferences/com.apple.RemoteDesktop VNCOnly -bool true
           
-          # 4. Надежная установка VNC пароля (12345678) через VNCSettings.txt (обходит баги kickstart на macOS 14)
-          sudo perl -we 'BEGIN { @k = unpack "C*", pack "H*", "1734516E8BA8C5E2FF1C39567390ADCA"}; $_ = $ARGV[0]; chomp; s/^(.{8}).*/$1/; @p = unpack "C*", $_; foreach (@k) { printf "%02X", $_ ^ (shift @p || 0) }; print "\n"' "12345678" | sudo tee /Library/Preferences/com.apple.VNCSettings.txt
-          sudo chmod 644 /Library/Preferences/com.apple.VNCSettings.txt
+          # Перезагружаем сервис для надежности
+          sudo launchctl unload -w /System/Library/LaunchDaemons/com.apple.screensharing.plist 2>/dev/null || true
+          sudo launchctl load -w /System/Library/LaunchDaemons/com.apple.screensharing.plist 2>/dev/null || true
           
-          # 5. Активация VNC через kickstart
-          sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart \
-            -activate -configure -access -on \
-            -users runner -privs -all \
-            -allowAccessFor -allUsers \
-            -clientopts -setvnclegacy yes -restart -agent -console || true
-          
-          # 6. Проверка, что порт 5900 открыт
           sleep 3
           netstat -an | grep 5900 || echo "Порт 5900 не слушается, но продолжаем..."
 
@@ -113,7 +93,7 @@ jobs:
       - name: ССЫЛКА НА ПРИЛОЖЕНИЕ (нажмите сюда)
         run: |
           # Запуск моста noVNC к VNC (5900 -> 8080)
-          nohup /tmp/novnc/utils/novnc_proxy --vnc localhost:5900 --listen 8080 > /tmp/novnc_proxy.log 2>&1 &
+          nohup /tmp/novnc/utils/novnc_proxy --vnc 127.0.0.1:5900 --listen 0.0.0.0:8080 > /tmp/novnc_proxy.log 2>&1 &
           
           # Запуск Cloudflare Quick Tunnel
           nohup /usr/local/bin/cloudflared tunnel --url http://localhost:8080 > /tmp/cloudflared.log 2>&1 &

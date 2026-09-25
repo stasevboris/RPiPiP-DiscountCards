@@ -42,7 +42,7 @@ public protocol DiscountCardsAPI {
 }
 
 public final class DiscountCardsAPIClient: DiscountCardsAPI {
-    public static let defaultURL = URL(string: "https://my-json-server.typicode.com/stasev/RPiPiP-DiscountCards/cards")!
+    public static let defaultURL = URL(string: "https://my-json-server.typicode.com/stasevboris/RPiPiP-DiscountCards/cards")!
     private let url: URL
     private let session: URLSession
     

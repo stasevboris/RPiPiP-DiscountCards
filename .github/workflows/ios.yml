@@ -39,7 +39,9 @@ jobs:
             -scheme DiscountCardsTests \
             -destination 'platform=iOS Simulator,name=iPhone 16 Pro,OS=latest' \
             -resultBundlePath TestResults.xcresult \
-            CODE_SIGNING_ALLOWED=NO
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            VALIDATE_PRODUCT=NO
 
       - name: Run UI Tests & Capture Screenshots
         run: |
@@ -47,7 +49,9 @@ jobs:
             -project DiscountCards.xcodeproj \
             -scheme DiscountCardsUITests \
             -destination 'platform=iOS Simulator,name=iPhone 16 Pro,OS=latest' \
-            CODE_SIGNING_ALLOWED=NO
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            VALIDATE_PRODUCT=NO
 
       - name: Upload Test Results Artifact
         if: always()

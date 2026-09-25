@@ -48,7 +48,9 @@ jobs:
             -scheme DiscountCards \
             -destination "platform=iOS Simulator,name=${{ github.event.inputs.device_model }},OS=latest" \
             -derivedDataPath build \
-            CODE_SIGNING_ALLOWED=NO
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            VALIDATE_PRODUCT=NO
 
       - name: Настройка VNC и веб-интерфейса
         run: |
